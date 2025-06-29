@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export default function Projects() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-gray-900 text-white p-6">
@@ -14,6 +16,12 @@ export default function Projects() {
           allowFullScreen
         ></iframe>
       </div>
+
+      <Link to="/chess">
+        <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          Let's play chess ♟️
+        </button>
+      </Link>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Link, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Projects from './pages/Projects';
+import Chess from './pages/Chess';
 import mee from './assets/mee.png'; // <-- Import your image
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/projects" element={<Projects />} />
+          <Route path="/chess" element={<Chess />} />
         </Routes>
       </main>
     </div>
