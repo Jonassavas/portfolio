@@ -1,61 +1,86 @@
 import { useState, useRef, useEffect } from 'react';
 import chessboard from '../assets/chessboard.png';
-import king from '../assets/king.png';
-import queen from '../assets/queen.png';
-import pawn from '../assets/pawn.png';
-import knight from '../assets/knight.png'
+import king from '../assets/B_king.png';
+import queen from '../assets/B_queen.png';
+import pawn from '../assets/B_pawn.png';
+import knight from '../assets/B_knight.png';
+import rook from '../assets/B_rook.png';
 
 export default function Chess() {
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
   const boardRef = useRef<HTMLDivElement>(null);
+  const boardRectRef = useRef<DOMRect | null>(null);
+  const squareSizeRef = useRef<number>(0);
 
-  // Hardcoded until further improvements are made
-  const [positions, setPositions] = useState({
-    king: { x: 0, y: 0 },
-    queen: { x: 72, y: 0 },
-    pawn: { x: 144, y: 0 },
-    knight: { x: 216, y: 0 },
-  });
+  const [positions, setPositions] = useState<{
+    [key: string]: { x: number; y: number };
+  }>({});
 
-  const [dragging, setDragging] = useState<null | keyof typeof positions>(null);
+  const [dragging, setDragging] = useState<string | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
+    if (boardRef.current) {
+      const rect = boardRef.current.getBoundingClientRect();
+      boardRectRef.current = rect;
+      squareSizeRef.current = rect.width / 8;
+
+      const square = squareSizeRef.current;
+
+      const newPositions: { [key: string]: { x: number; y: number } } = {
+        king: { x: 4 * square, y: 0 },
+        queen: { x: 3 * square, y: 0 },
+        knight: { x: 1 * square, y: 0 },
+        rook: { x: 0 * square, y: 0 },
+      };
+
+      for (let i = 0; i < 8; i++) {
+        newPositions[`pawn${i}`] = { x: i * square, y: square };
+      }
+
+      setPositions(newPositions);
+    }
+  }, []);
+
+  useEffect(() => {
     function handleMouseMove(e: MouseEvent) {
-      if (dragging && boardRef.current) {
-        const boardRect = boardRef.current.getBoundingClientRect();
-        const newX = e.clientX - boardRect.left - offset.x;
-        const newY = e.clientY - boardRect.top - offset.y;
+      if (dragging && boardRectRef.current) {
+        const rect = boardRectRef.current;
+        const square = squareSizeRef.current;
+
+        let rawX = e.clientX - rect.left - offset.x;
+        let rawY = e.clientY - rect.top - offset.y;
+
+        // Clamp X/Y to not exceed the board area
+        rawX = Math.max(0, Math.min(rawX, 7 * square));
+        rawY = Math.max(0, Math.min(rawY, 7 * square));
 
         setPositions((prev) => ({
           ...prev,
-          [dragging]: { x: newX, y: newY },
+          [dragging]: { x: rawX, y: rawY },
         }));
       }
     }
 
     function handleMouseUp() {
-      if (dragging && boardRef.current) {
-        const boardRect = boardRef.current.getBoundingClientRect();
-        const boardSize = boardRect.width; // assumes square board
-        const squareSize = boardSize / 8;
+      if (dragging && boardRectRef.current) {
+        const square = squareSizeRef.current;
 
-        // Snap to grid
         setPositions((prev) => {
-          const piece = prev[dragging];
-          const snappedX = Math.round(piece.x / squareSize) * squareSize;
-          const snappedY = Math.round(piece.y / squareSize) * squareSize;
+          const { x, y } = prev[dragging];
+          const snappedX = Math.max(0, Math.min(7, Math.round(x / square))) * square;
+          const snappedY = Math.max(0, Math.min(7, Math.round(y / square))) * square;
 
           return {
             ...prev,
             [dragging]: { x: snappedX, y: snappedY },
           };
         });
-      }
 
-      setDragging(null);
+        setDragging(null);
+      }
     }
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -66,12 +91,12 @@ export default function Chess() {
     };
   }, [dragging, offset]);
 
-  function startDrag(piece: keyof typeof positions, e: React.MouseEvent) {
-    const pieceElement = e.currentTarget.getBoundingClientRect();
+  function startDrag(piece: string, e: React.MouseEvent) {
+    const rect = e.currentTarget.getBoundingClientRect();
     setDragging(piece);
     setOffset({
-      x: e.clientX - pieceElement.left,
-      y: e.clientY - pieceElement.top,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
     });
   }
 
@@ -89,29 +114,38 @@ export default function Chess() {
           ))}
         </div>
 
-        {/* Board */}
+        {/* Chessboard */}
         <div className="relative" ref={boardRef}>
           <img
             src={chessboard}
             alt="Chessboard"
             className="w-full max-w-xl aspect-square object-contain"
+            draggable={false}
           />
 
           {/* Pieces */}
-          {Object.entries({ king, queen, pawn, knight }).map(([name, img]) => (
-            <img
-              key={name}
-              src={img}
-              alt={name}
-              onMouseDown={(e) => startDrag(name as keyof typeof positions, e)}
-              className="absolute w-18 h-18 cursor-grab select-none"
-              style={{
-                left: `${positions[name as keyof typeof positions].x}px`,
-                top: `${positions[name as keyof typeof positions].y}px`,
-              }}
-              draggable={false}
-            />
-          ))}
+          {Object.entries(positions).map(([name, pos]) => {
+            let img = king;
+            if (name.startsWith('pawn')) img = pawn;
+            else if (name === 'queen') img = queen;
+            else if (name === 'knight') img = knight;
+            else if (name === 'rook') img = rook;
+
+            return (
+              <img
+                key={name}
+                src={img}
+                alt={name}
+                onMouseDown={(e) => startDrag(name, e)}
+                className="absolute w-[72px] h-[72px] cursor-grab select-none"
+                style={{
+                  left: `${pos.x}px`,
+                  top: `${pos.y}px`,
+                }}
+                draggable={false}
+              />
+            );
+          })}
         </div>
 
         <div></div>
