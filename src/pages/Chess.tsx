@@ -1,10 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import chessboard from '../assets/chessboard.png';
-import king from '../assets/B_king.png';
-import queen from '../assets/B_queen.png';
-import pawn from '../assets/B_pawn.png';
-import knight from '../assets/B_knight.png';
-import rook from '../assets/B_rook.png';
+import B_king from '../assets/B_king.png';
+import B_queen from '../assets/B_queen.png';
+import B_pawn from '../assets/B_pawn.png';
+import B_knight from '../assets/B_knight.png';
+import B_rook from '../assets/B_rook.png';
+import B_bishop from '../assets/B_bishop.png';
+
+import W_king from '../assets/W_king.png';
+import W_queen from '../assets/W_queen.png';
+import W_pawn from '../assets/W_pawn.png';
+import W_knight from '../assets/W_knight.png';
+import W_rook from '../assets/W_rook.png';
+import W_bishop from '../assets/W_bishop.png';
 
 export default function Chess() {
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -13,35 +21,49 @@ export default function Chess() {
   const boardRef = useRef<HTMLDivElement>(null);
   const boardRectRef = useRef<DOMRect | null>(null);
   const squareSizeRef = useRef<number>(0);
-
-  const [positions, setPositions] = useState<{
-    [key: string]: { x: number; y: number };
-  }>({});
-
+  const [positions, setPositions] = useState<{ [key: string]: { x: number; y: number } }>({});
   const [dragging, setDragging] = useState<string | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    if (boardRef.current) {
-      const rect = boardRef.current.getBoundingClientRect();
-      boardRectRef.current = rect;
-      squareSizeRef.current = rect.width / 8;
+    function tryInitBoard() {
+      if (boardRef.current) {
+        const rect = boardRef.current.getBoundingClientRect();
+        if (rect.width === 0) {
+          requestAnimationFrame(tryInitBoard);
+          return;
+        }
 
-      const square = squareSizeRef.current;
+        boardRectRef.current = rect;
+        const square = rect.width / 8;
+        squareSizeRef.current = square;
 
-      const newPositions: { [key: string]: { x: number; y: number } } = {
-        king: { x: 4 * square, y: 0 },
-        queen: { x: 3 * square, y: 0 },
-        knight: { x: 1 * square, y: 0 },
-        rook: { x: 0 * square, y: 0 },
-      };
+        const newPositions: { [key: string]: { x: number; y: number } } = {};
 
-      for (let i = 0; i < 8; i++) {
-        newPositions[`pawn${i}`] = { x: i * square, y: square };
+        const placePiece = (name: string, fileIndex: number, rankIndex: number) => {
+          newPositions[name] = {
+            x: fileIndex * square,
+            y: rankIndex * square,
+          };
+        };
+
+        // Black pieces (top of the board)
+        ['B_rook1', 'B_knight1', 'B_bishop1', 'B_queen', 'B_king', 'B_bishop2', 'B_knight2', 'B_rook2'].forEach(
+          (name, i) => placePiece(name, i, 0)
+        );
+        for (let i = 0; i < 8; i++) placePiece(`B_pawn${i + 1}`, i, 1);
+
+        // White pieces (bottom of the board)
+        ['W_rook1', 'W_knight1', 'W_bishop1', 'W_queen', 'W_king', 'W_bishop2', 'W_knight2', 'W_rook2'].forEach(
+          (name, i) => placePiece(name, i, 7)
+        );
+        for (let i = 0; i < 8; i++) placePiece(`W_pawn${i + 1}`, i, 6);
+
+        setPositions(newPositions);
       }
-
-      setPositions(newPositions);
     }
+
+    requestAnimationFrame(tryInitBoard);
   }, []);
 
   useEffect(() => {
@@ -50,16 +72,15 @@ export default function Chess() {
         const rect = boardRectRef.current;
         const square = squareSizeRef.current;
 
-        let rawX = e.clientX - rect.left - offset.x;
-        let rawY = e.clientY - rect.top - offset.y;
+        let newX = e.clientX - rect.left - offset.x;
+        let newY = e.clientY - rect.top - offset.y;
 
-        // Clamp X/Y to not exceed the board area
-        rawX = Math.max(0, Math.min(rawX, 7 * square));
-        rawY = Math.max(0, Math.min(rawY, 7 * square));
+        newX = Math.max(0, Math.min(newX, 7 * square));
+        newY = Math.max(0, Math.min(newY, 7 * square));
 
         setPositions((prev) => ({
           ...prev,
-          [dragging]: { x: rawX, y: rawY },
+          [dragging]: { x: newX, y: newY },
         }));
       }
     }
@@ -67,19 +88,18 @@ export default function Chess() {
     function handleMouseUp() {
       if (dragging && boardRectRef.current) {
         const square = squareSizeRef.current;
+        const piece = positions[dragging];
 
-        setPositions((prev) => {
-          const { x, y } = prev[dragging];
-          const snappedX = Math.max(0, Math.min(7, Math.round(x / square))) * square;
-          const snappedY = Math.max(0, Math.min(7, Math.round(y / square))) * square;
+        const snappedX = Math.max(0, Math.min(7, Math.round(piece.x / square))) * square;
+        const snappedY = Math.max(0, Math.min(7, Math.round(piece.y / square))) * square;
 
-          return {
-            ...prev,
-            [dragging]: { x: snappedX, y: snappedY },
-          };
-        });
+        setPositions((prev) => ({
+          ...prev,
+          [dragging]: { x: snappedX, y: snappedY },
+        }));
 
         setDragging(null);
+        document.body.style.cursor = 'default';
       }
     }
 
@@ -89,7 +109,7 @@ export default function Chess() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragging, offset]);
+  }, [dragging, offset, positions]);
 
   function startDrag(piece: string, e: React.MouseEvent) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -98,6 +118,26 @@ export default function Chess() {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
     });
+    document.body.style.cursor = 'grabbing';
+  }
+
+  function getPieceImage(name: string) {
+    if (name.startsWith('W_')) {
+      if (name.includes('pawn')) return W_pawn;
+      if (name.includes('rook')) return W_rook;
+      if (name.includes('knight')) return W_knight;
+      if (name.includes('bishop')) return W_bishop;
+      if (name.includes('queen')) return W_queen;
+      if (name.includes('king')) return W_king;
+    } else if (name.startsWith('B_')) {
+      if (name.includes('pawn')) return B_pawn;
+      if (name.includes('rook')) return B_rook;
+      if (name.includes('knight')) return B_knight;
+      if (name.includes('bishop')) return B_bishop;
+      if (name.includes('queen')) return B_queen;
+      if (name.includes('king')) return B_king;
+    }
+    return '';
   }
 
   return (
@@ -123,14 +163,8 @@ export default function Chess() {
             draggable={false}
           />
 
-          {/* Pieces */}
           {Object.entries(positions).map(([name, pos]) => {
-            let img = king;
-            if (name.startsWith('pawn')) img = pawn;
-            else if (name === 'queen') img = queen;
-            else if (name === 'knight') img = knight;
-            else if (name === 'rook') img = rook;
-
+            const img = getPieceImage(name);
             return (
               <img
                 key={name}
@@ -138,10 +172,7 @@ export default function Chess() {
                 alt={name}
                 onMouseDown={(e) => startDrag(name, e)}
                 className="absolute w-[72px] h-[72px] cursor-grab select-none"
-                style={{
-                  left: `${pos.x}px`,
-                  top: `${pos.y}px`,
-                }}
+                style={{ left: `${pos.x}px`, top: `${pos.y}px` }}
                 draggable={false}
               />
             );
