@@ -72,15 +72,30 @@ export default function Chess() {
         const rect = boardRectRef.current;
         const square = squareSizeRef.current;
 
-        let newX = e.clientX - rect.left - offset.x;
-        let newY = e.clientY - rect.top - offset.y;
+        // Use pageX/pageY to account for scroll offset
+        const mouseX = e.pageX;
+        const mouseY = e.pageY;
 
-        newX = Math.max(0, Math.min(newX, 7 * square));
-        newY = Math.max(0, Math.min(newY, 7 * square));
+        // Clamp mouse within board + small buffer
+        const buffer = 16; // allows a small "wiggle" near the edges
+        const minX = rect.left + window.scrollX - buffer;
+        const minY = rect.top + window.scrollY - buffer;
+        const maxX = rect.right + window.scrollX + buffer;
+        const maxY = rect.bottom + window.scrollY + buffer;
+
+        const clampedX = Math.max(minX, Math.min(mouseX, maxX));
+        const clampedY = Math.max(minY, Math.min(mouseY, maxY));
+
+        // Convert to position relative to board
+        const newX = clampedX - rect.left - offset.x;
+        const newY = clampedY - rect.top - offset.y;
 
         setPositions((prev) => ({
           ...prev,
-          [dragging]: { x: newX, y: newY },
+          [dragging]: {
+            x: Math.max(0, Math.min(newX, 7 * square)),
+            y: Math.max(0, Math.min(newY, 7 * square)),
+          },
         }));
       }
     }
