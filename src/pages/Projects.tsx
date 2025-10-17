@@ -12,8 +12,8 @@ export default function Projects() {
   const [loading, setLoading] = useState(false);
   const [animationDone, setAnimationDone] = useState(false);
 
-  const loadingTimeout = useRef<NodeJS.Timeout | null>(null);
-  const animationTimeout = useRef<NodeJS.Timeout | null>(null);
+  const loadingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const animationTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const projects = [
     { name: "Hearthstone Clone", image: hearthstoneImg, gif: hearthstoneGif, link: "/hearthstone" },
