@@ -1,67 +1,62 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import hearthstoneImg from "../assets/hearthstone.jpg";
 import hearthstoneGif from "../assets/hearthstone_gameplay.gif";
 import chessKing from "../assets/W_king.png";
-import videoThumb from '../assets/video_placeholder.jpg'; // placeholder
+import videoThumb from "../assets/video_placeholder.jpg";
+import jactLogo from "../assets/jact-logo.png";
 
 export default function Projects() {
   const [hoveredProject, setHoveredProject] = useState<string | null>(null);
   const [hoveredButtonRect, setHoveredButtonRect] = useState<DOMRect | null>(null);
+  const [loading, setLoading] = useState(false);
   const [animationDone, setAnimationDone] = useState(false);
+
+  const loadingTimeout = useRef<NodeJS.Timeout | null>(null);
   const animationTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const projects = [
-    {
-      name: "Hearthstone Clone",
-      image: hearthstoneImg,
-      gif: hearthstoneGif,
-      link: "/hearthstone",
-    },
-    {
-      name: "Chess Game",
-      image: chessKing,
-      gif: null,
-      link: "/chess",
-    },
-    {
-      name: 'YouTube Demo',
-      image: videoThumb,
-      link: 'https://www.youtube.com/watch?v=s7HcPvTew_4',
-    },
+    { name: "Hearthstone Clone", image: hearthstoneImg, gif: hearthstoneGif, link: "/hearthstone" },
+    { name: "Chess Game", image: chessKing, gif: null, link: "/chess" },
+    { name: "YouTube Demo", image: videoThumb, link: "https://www.youtube.com/watch?v=s7HcPvTew_4" },
+    { name: "Master's Thesis - JACT", image: jactLogo, gif: null, link: "/jact" },
   ];
 
-  // On hover, store project name + button bounding rect
   const handleMouseEnter = (projectName: string, e: React.MouseEvent<HTMLAnchorElement>) => {
-    if(animationTimeout.current) clearTimeout(animationTimeout.current);
+    if (loadingTimeout.current) clearTimeout(loadingTimeout.current);
+    if (animationTimeout.current) clearTimeout(animationTimeout.current);
+
     setHoveredProject(projectName);
-    setAnimationDone(false);
     setHoveredButtonRect(e.currentTarget.getBoundingClientRect());
-    
-    // After animation duration (e.g. 350ms), set animationDone to true to show final preview
-    animationTimeout.current = setTimeout(() => {
-      setAnimationDone(true);
-    }, 350);
+    setLoading(true);
+    setAnimationDone(false);
+
+    // Circle fills for 600ms, THEN preview animation runs
+    loadingTimeout.current = setTimeout(() => {
+      setLoading(false);
+      animationTimeout.current = setTimeout(() => {
+        setAnimationDone(true);
+      }, 350); // animation duration
+    }, 600); // loading circle duration
   };
 
-  // On leave, clear states and timers
   const handleMouseLeave = () => {
-    if(animationTimeout.current) clearTimeout(animationTimeout.current);
+    if (loadingTimeout.current) clearTimeout(loadingTimeout.current);
+    if (animationTimeout.current) clearTimeout(animationTimeout.current);
     setHoveredProject(null);
     setHoveredButtonRect(null);
+    setLoading(false);
     setAnimationDone(false);
   };
 
-  // Fixed preview position on right side of screen (adjust as needed)
-  const previewRight = 60; // px from right edge
-  const previewTop = 150;  // px from top
-
-  // Small box size at start (button's height approx 1.5cm ~ 24px)
-  const smallBoxSize = 24; // px
-
-  // Final preview size
+  const previewRight = 60;
+  const previewTop = 150;
+  const smallBoxSize = 24;
   const finalWidth = 400;
   const finalHeight = 225;
+
+  // Only show preview when hover + animation is done
+  const projectToShow = animationDone && hoveredProject ? hoveredProject : null;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col lg:flex-row p-6 relative">
@@ -91,25 +86,44 @@ export default function Projects() {
                 }}
               />
               <div className="flex-1 pl-4 text-lg font-semibold">
-                {project.name}
+                {project.name.includes("JACT") ? (
+                  <>
+                    Master's Thesis - <em>JACT</em>
+                  </>
+                ) : (
+                  project.name
+                )}
               </div>
+
+              {/* White circular loading indicator */}
+              {loading && hoveredProject === project.name && (
+                <div className="absolute right-4">
+                  <svg width="36" height="36" viewBox="0 0 36 36">
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="16"
+                      stroke="white"
+                      strokeWidth="3"
+                      fill="none"
+                      strokeDasharray="100"
+                      strokeDashoffset="100"
+                      style={{
+                        animation: "fillCircle 0.6s linear forwards",
+                      }}
+                    />
+                  </svg>
+                </div>
+              )}
             </Link>
           ))}
         </div>
       </div>
 
-      {/* Animated small preview box that animates from button to final preview */}
-      {hoveredProject && hoveredButtonRect && !animationDone && (() => {
-        // Calculate animation keyframes from hoveredButtonRect.right to final preview right edge:
-        // We'll animate left and width/height + opacity
-        // Starting position: hoveredButtonRect.right - smallBoxSize, top = hoveredButtonRect.top
-        // Ending position: window.innerWidth - previewRight - finalWidth, top = previewTop
-
+      {/* Animated box that moves from button to preview (after loading) */}
+      {hoveredProject && hoveredButtonRect && !animationDone && !loading && (() => {
         const startLeft = hoveredButtonRect.right - smallBoxSize;
         const startTop = hoveredButtonRect.top;
-        const endLeft = window.innerWidth - previewRight - finalWidth;
-        const endTop = previewTop;
-
         return (
           <div
             style={{
@@ -125,39 +139,13 @@ export default function Projects() {
               zIndex: 30,
               animation: "growAndMove 350ms forwards",
             }}
-          >
-            {(() => {
-              const project = projects.find(p => p.name === hoveredProject);
-              if (!project) return null;
-
-              if (project.name === "YouTube Demo") {
-                // Show thumbnail small on animation start (video won't autoplay here)
-                return (
-                  <img
-                    src={project.image}
-                    alt={`${project.name} preview thumbnail`}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                );
-              }
-              if (project.gif) {
-                return (
-                  <img
-                    src={project.gif}
-                    alt={`${project.name} preview thumbnail`}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                );
-              }
-              return <div className="text-gray-500 italic p-2 text-xs">No preview</div>;
-            })()}
-          </div>
+          />
         );
       })()}
 
-      {/* Final fixed preview that appears after animation */}
-      {hoveredProject && animationDone && (() => {
-        const project = projects.find(p => p.name === hoveredProject);
+      {/* Final preview — only visible after loading + animation */}
+      {projectToShow && (() => {
+        const project = projects.find((p) => p.name === projectToShow);
         if (!project) return null;
 
         return (
@@ -173,6 +161,8 @@ export default function Projects() {
               boxShadow: "0 10px 20px rgba(0,0,0,0.7)",
               backgroundColor: "#1f2937",
               zIndex: 25,
+              opacity: 1,
+              transition: "opacity 0.2s ease-in-out",
             }}
           >
             {project.name === "YouTube Demo" ? (
@@ -192,14 +182,22 @@ export default function Projects() {
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             ) : (
-              <div className="text-gray-500 italic p-4">No preview available</div>
+              <img
+                src={project.image}
+                alt={`${project.name} preview`}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
             )}
           </div>
         );
       })()}
 
-      {/* Animation keyframes */}
       <style>{`
+        @keyframes fillCircle {
+          from { stroke-dashoffset: 100; }
+          to { stroke-dashoffset: 0; }
+        }
+
         @keyframes growAndMove {
           0% {
             width: ${smallBoxSize}px;
