@@ -11,7 +11,7 @@ export default function App() {
   const [lang, setLang] = useState<'SV' | 'EN'>('EN');
   const [langDropdown, setLangDropdown] = useState(false);
   const [hovering, setHovering] = useState(false);
-  const [gracePeriod, setGracePeriod] = useState(false); // controls the short delay after opening
+  const [gracePeriod, setGracePeriod] = useState(false);
   const location = useLocation();
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLDivElement | null>(null);
@@ -21,7 +21,7 @@ export default function App() {
     setLangDropdown(false);
   };
 
-  // Handle clicking outside the dropdown
+  // Handle clicking outside dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -37,23 +37,19 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // When dropdown opens, enable a short grace period
+  // Grace period logic after dropdown opens
   useEffect(() => {
     if (langDropdown) {
       setGracePeriod(true);
-      const timeout = setTimeout(() => {
-        setGracePeriod(false);
-      }, 1500); // 1.5 seconds grace time after open
+      const timeout = setTimeout(() => setGracePeriod(false), 1500);
       return () => clearTimeout(timeout);
     }
   }, [langDropdown]);
 
-  // Close dropdown after grace period if user leaves
+  // Close dropdown when leaving after grace period
   useEffect(() => {
     if (!gracePeriod && langDropdown && !hovering) {
-      const timeout = setTimeout(() => {
-        setLangDropdown(false);
-      }, 100); // close almost immediately after leaving
+      const timeout = setTimeout(() => setLangDropdown(false), 150);
       return () => clearTimeout(timeout);
     }
   }, [hovering, gracePeriod, langDropdown]);
@@ -96,12 +92,14 @@ export default function App() {
               <Link
                 key={label}
                 to={path}
-                className={`relative text-lg font-semibold px-2 py-1 cursor-pointer transition-colors duration-200
-                  ${isActive ? 'text-white' : 'text-gray-300'} 
-                  hover:text-white`}
+                className={`relative text-lg font-semibold px-3 py-1 cursor-pointer rounded-md transition-all duration-200
+                  ${
+                    isActive
+                      ? 'text-white border border-white bg-gray-700 cursor-default'
+                      : 'text-gray-300 border border-transparent hover:border-white hover:text-white'
+                  }`}
               >
                 {label}
-                <span className="absolute inset-0 border border-white opacity-0 rounded-md transition-opacity duration-200 hover:opacity-100 pointer-events-none"></span>
               </Link>
             );
           })}
@@ -109,13 +107,12 @@ export default function App() {
           {/* Language selector */}
           <div
             ref={buttonRef}
-            className="relative cursor-pointer px-2 py-1 flex items-center gap-1 text-lg font-semibold transition-colors duration-200 hover:text-white"
+            className="relative cursor-pointer px-3 py-1 flex items-center gap-1 text-lg font-semibold rounded-md transition-all duration-200
+                       hover:text-white hover:border-white border border-transparent"
             onClick={() => setLangDropdown((prev) => !prev)}
             onMouseEnter={() => setHovering(true)}
             onMouseLeave={() => setHovering(false)}
           >
-            <span className="absolute inset-0 border border-white opacity-0 rounded-md transition-opacity duration-200 hover:opacity-100 pointer-events-none"></span>
-
             {/* Flag + label */}
             <img
               src={lang === 'SV' ? svFlag : usFlag}
@@ -136,7 +133,7 @@ export default function App() {
                   <button
                     key={code}
                     onClick={() => selectLang(code)}
-                    className="flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-700"
+                    className="flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-700 transition-colors"
                   >
                     <div
                       className={`h-3 w-3 rounded-full border border-white flex-shrink-0 ${
